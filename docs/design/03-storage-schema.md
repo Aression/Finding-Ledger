@@ -1,18 +1,18 @@
-# SQLite 数据模型与迁移方案
+# SQLite 数据模型
 
-本文定义 V1 的建议存储结构。它是实现目标，不表示现有仓库已经包含相应代码。所有创建、状态变更和关系维护应由应用服务完成，并在必要时使用同一 SQLite 事务。
+本文定义 Finding Ledger 的目标数据库结构。数据层负责保存主张、来源、关联关系与审计事件；状态校验、适用性判断和检索策略由应用服务负责。
 
-## 1. 设计约束
+## 1. 数据模型原则
 
-- 使用稳定 ID；记录 ID 不应依赖文件路径、会话序号或模型生成文本。
-- Finding、Evidence 和两者之间的证据关系分别存储。
-- 认知状态与生命周期分列。
-- 主张的含义被修改时，优先创建新 finding 并建立关系，不对历史主张做无痕重写。
-- 所有时间使用 UTC ISO 8601，统一由应用层生成。
-- SQLite 的外键必须启用；应用层负责 JSON 校验、状态迁移和审计事件。
-- 首版不强依赖 FTS、向量扩展或外部数据库。
+- 使用稳定 ID，避免以文本内容、路径或会话序号作为主键。
+- 分开存储 finding、evidence 和两者的关系。
+- 将认知状态与生命周期分开。
+- 资源定位符归入 evidence，工作文档关联归入 doc_links。
+- 关键状态变化与关系操作必须在事务内写入事件。
+- 外键开启，时间戳统一使用 UTC ISO 8601。
+- JSON 字段由应用层验证；未知或不支持的 scope 条件不得默认匹配。
 
-## 2. 建议 DDL
+## 2. DDL
 
 ~~~sql
 PRAGMA foreign_keys = ON;
@@ -185,33 +185,43 @@ CREATE INDEX idx_doc_links_finding
     ON doc_links(finding_id, link_type);
 ~~~
 
-## 3. 表职责与关键约束
+## 3. 表职责
 
 ### projects
-identity_key 是项目隔离主键。优先使用规范化后的 Git remote；对于无 remote 的项目，使用规范化路径作为回退。root_path_hint 只是提示，不应作为唯一身份依据。不要默认把本地绝对路径注入给模型或同步到远端。
+
+identity_key 是项目隔离主键。优先使用规范化 Git remote；没有 remote 时可使用规范化本地路径作为项目身份。root_path_hint 仅用于定位，不承担唯一身份职责。
 
 ### findings
-statement 应简洁、可单独理解；details 用于补充上下文。scope_json 的结构约定见领域模型与检索文档。tags_json 只承载轻量标签，不替代结构化字段。
 
-应用层应校验 state 与 claim_kind 的组合。例如 constraint 或 decision 通常使用 not_applicable；若把诊断标记为 supported，应存在支持证据或明确的、可审计的例外政策。SQLite CHECK 不足以表达跨表条件，所以这类约束必须由服务层验证。
+- claim_kind 描述内容性质：observation、diagnosis、constraint、decision 或 procedure。
+- epistemic_state 描述证据状态。
+- lifecycle_state 描述记录生命周期。
+- scope_json 描述适用条件。
+- retrieval_policy 描述自动检索策略。
 
-### evidence 与 finding_evidence
-evidence 描述源材料本身。finding_evidence 描述证据对某条结论的作用及其取得/分析方法。同一个来源可与多条 findings 关联，且对不同结论可以有不同 relation。
+应用层应检查跨字段约束。例如，诊断标记为 supported 时必须有关联的支持证据；约束和操作方法可以使用 not_applicable。SQL CHECK 无法检查跨表证据条件，因此必须由服务层验证。
 
-source_ref 是定位符，不一定是 URL。对于代码，建议保存仓库身份、commit、路径和行号；对于实验，建议保存 run ID、配置、代码版本和结果工件位置；对于会话，使用稳定 session ID 与序号。source_ref 不应是唯一能判断证据内容的字段。
+### evidence
+
+source_ref 是定位符，可以是会话序号、代码位置、commit、实验 run ID、日志 ID 或 URL。来源类型并不自动决定证据可靠性。可获得时，应记录 revision 和 content_hash，以识别来源变化。
+
+### finding_evidence
+
+该表将证据关联到具体主张，并指定支持、反驳或补充关系。一个来源可以关联多条 findings，对不同 finding 的作用也可以不同。
 
 ### finding_relations
-supersedes 的方向固定为“新结论指向旧结论”。关系插入和旧记录 lifecycle_state 更新必须在同一事务完成。V1 暂不要求复杂图算法，但禁止自指；应用层应检测 supersedes 环。
+
+supersedes 方向固定为“新 finding 指向被取代的 finding”。应用层必须拒绝自指和取代环。关系插入、被取代记录的生命周期更新和事件写入必须处于同一事务。
 
 ### finding_events
-事件表记录影响后续推理的关键变化，不要求成为完整的事件溯源系统。对状态、scope、关系、关键证据集合的变化必须记事件；普通只读查询无需记录。
+
+用于追踪会影响后续推理的关键变化，包括创建、证据添加、状态变更、scope 变更、关系创建、重新验证和规则沉淀状态改变。无需记录每次只读查询。
 
 ### doc_links
-该表只管理 finding 与工作文档/规则的关联。资源路径和日志源应进入 evidence，不再单独维护 resources 表。promotion_state 用于区分提议、批准和落地，避免用一个 promoted_to_rule 布尔值表达多个阶段。
 
-## 4. JSON 约定
+只负责 finding 与工作文档之间的关联。promotion_state 明确区分提议、批准、拒绝和落地完成，避免用单一布尔值描述整个流程。
 
-scope_json 建议遵循以下形状：
+## 4. Scope JSON 约定
 
 ~~~json
 {
@@ -232,44 +242,18 @@ scope_json 建议遵循以下形状：
 }
 ~~~
 
-- match 表示判断直接适用性所需的条件。
-- context 表示结论形成时的追溯背景，不自动构成硬约束。
-- revalidate_on 表示需要重新验证的变更类别。
+- match 是判断直接适用性所需的条件。
+- context 是结论产生时的背景，用于追溯，不自动构成硬约束。
+- revalidate_on 描述哪些变化会触发重新验证。
 
-上述示例仅演示结构，不代表任何实际实验结论。应用层必须校验 JSON，并定义缺失字段、未知字段和不支持的匹配条件如何处理。
+这个 JSON 只是结构示例。应用服务必须定义字段比较、缺失值和未知条件的行为；条件不明时不得默认判定为 applicable。
 
-## 5. 旧 schema 迁移
+## 5. 应用层一致性要求
 
-旧版本含有 findings.evidence_type、findings.status、superseded_by、evidence.kind/ref/supports、resources 和 promoted_to_rule。建议通过版本化迁移脚本转换，不要手工直接改数据库。
-
-| 旧值/字段 | 新模型转换 |
-|---|---|
-| conclusion | statement |
-| project 路径 | 查询或创建 projects，再写入 project_id；保留 root_path_hint |
-| evidence_type=verified | 有实验结果及有效引用时可映射 supported；证据缺失时转 provisional 或 unassessed，并标记待审查 |
-| evidence_type=confirmed | 若有可定位的代码证据，可映射 supported；只有文字说明时应进入待审查队列 |
-| evidence_type=user-confirmed | 迁移为 user_statement 来源证据；约束/决策类可使用 not_applicable，实证性主张不能仅凭该值自动成为 supported |
-| evidence_type=suspected/hypothesized | 通常映射 provisional |
-| evidence_type=refuted | epistemic_state=refuted；生命周期仍需根据旧 status 判断 |
-| evidence_type=superseded 或 status=superseded | lifecycle_state=superseded；能定位替代记录时创建 supersedes 关系 |
-| status=refuted | epistemic_state 至少需要人工核对；保留原始值并记录迁移决策 |
-| status=active | lifecycle_state=current |
-| superseded_by | 创建“新 finding → 旧 finding”的 supersedes 关系，校验目标存在 |
-| evidence.supports=1/0 | 分别转换为 supports/contradicts |
-| resources | 转换为 evidence，原始 path 进入 source_ref，description 进入 excerpt 或 metadata |
-| promoted_to_rule=1 | 若能找到具体文档，迁移到 doc_links；无法定位目标时标记待审查，不猜测落地状态 |
-
-当旧 evidence_type 与 status 矛盾时，例如 evidence_type=verified 但 status=refuted，不能用其中一列静默覆盖另一列。迁移器应保存原值、写入迁移事件，并将该记录放入人工核对队列。
-
-## 6. 迁移执行顺序
-
-1. 备份数据库并记录 schema 版本与行数。
-2. 创建新表，不删除旧表。
-3. 建立 projects 映射，再迁移 findings。
-4. 迁移 evidence 与资源记录，并重建关联关系。
-5. 重建 supersedes 关系，检查缺失目标、自环和环路。
-6. 对冲突状态和缺失证据的记录生成审查报告。
-7. 对项目隔离、外键、计数和抽样内容执行校验。
-8. 通过后再切换读写路径；保留可回滚备份。
-
-迁移必须幂等或有明确版本检查。schema_migrations 记录脚本版本与 checksum，避免同一迁移被重复执行。
+1. 写入 finding、关联初始证据和创建事件时应保持原子性。
+2. supported 需要支持证据，或经过定义且可审计的例外策略。
+3. refuted 应记录反证理由，不能仅修改状态字段。
+4. supersede_finding 必须在一个事务中创建新记录、关联关系、更新生命周期并记录事件。
+5. 任何关键状态变更都应写入 finding_events，包含 actor、理由和必要的 before/after 摘要。
+6. 物理删除不是默认的纠错方式；撤回、反证和归档应保留审计信息。隐私清理需要通过受控删除流程单独处理。
+7. schema_migrations 用于追踪当前应用版本所需的数据库 schema 版本、校验和及执行时间。
