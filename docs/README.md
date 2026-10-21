@@ -1,18 +1,18 @@
-# Finding Ledger 设计文档
+# Finding Ledger 设计总览
 
-本文档集定义 Finding Ledger 的目标行为、数据模型与实施边界。当前仓库仍处于概念设计阶段；除非某项能力在代码中实现并通过测试，不应把文档描述当作已交付功能。
+本文档集定义 Finding Ledger 的目标行为、核心数据模型、接口与验收标准。当前内容是设计契约；实现状态应以实际代码和测试为准。
 
-## 文档地图
+## 文档索引
 
-| 文档 | 回答的问题 |
+| 文档 | 范围 |
 |---|---|
-| [01 产品目标与用户故事](design/01-product-and-requirements.md) | 为谁解决什么问题，如何判断功能有用 |
-| [02 领域模型](design/02-domain-model.md) | finding、evidence、scope、关系之间的语义边界 |
-| [03 数据模型与迁移](design/03-storage-schema-and-migration.md) | SQLite 表结构、约束和旧模型迁移 |
-| [04 证据与状态机](design/04-evidence-state-and-lifecycle.md) | 结论如何获得支持、反证、取代和恢复 |
-| [05 检索与压缩恢复](design/05-retrieval-and-compaction.md) | 何时检索、如何判断适用性、如何控制注入预算 |
-| [06 工具 API](design/06-tool-api.md) | Agent 如何创建、查询、纠正和关联发现 |
-| [07 安全、评测与路线图](design/07-security-evaluation-roadmap.md) | 风险边界、测试指标和分阶段交付 |
+| [01 产品目标与用户故事](design/01-product-and-requirements.md) | 产品目标、用户故事、验收标准和成功指标 |
+| [02 领域模型](design/02-domain-model.md) | finding、evidence、scope 和关系的语义边界 |
+| [03 SQLite 数据模型](design/03-storage-schema.md) | 表结构、索引、约束和事务边界 |
+| [04 证据与状态机](design/04-evidence-state-and-lifecycle.md) | 证据关系、状态变更、反证与取代 |
+| [05 检索与上下文恢复](design/05-retrieval-and-compaction.md) | 适用性判定、检索排序、预算和注入 |
+| [06 工具 API](design/06-tool-api.md) | 创建、查询、纠错、重新验证和规则提议 |
+| [07 安全、评测与路线图](design/07-security-evaluation-roadmap.md) | 风险、测试、效果指标和交付顺序 |
 
 ## 总体架构
 
@@ -35,32 +35,32 @@ Task context --------> Retrieval & scope matcher
                          Agent continuation
 ~~~
 
-建议按边界分层：
+架构划分：
 
-- **工具接口层：** 将模型意图转换为明确、可验证的操作参数。
-- **应用服务层：** 执行状态转换、证据关联、去重和事务约束。
-- **存储层：** 保存结论、证据、关系与事件，不承担模型推理。
-- **检索层：** 根据项目、适用范围、任务相关性和 token 预算选择候选记录。
-- **宿主适配层：** 订阅会话开始、上下文压缩完成等实际可用事件，并将结果注入上下文。
+- **工具接口层：** 将模型意图转化为可验证的业务操作。
+- **应用服务层：** 执行输入校验、状态机规则、事务和审计。
+- **存储层：** 保存 findings、evidence、关系和事件。
+- **检索层：** 根据项目、适用范围、任务相关性和 token 预算选择记录。
+- **宿主适配层：** 接收会话事件并将检索结果注入上下文。
 
-## 核心架构决策
+## 核心设计决策
 
-1. **epistemic_state 与 lifecycle_state 分离。** refuted 是认知状态；superseded 是生命周期状态。它们不可放在一个枚举中。
-2. **证据是独立实体。** evidence 表示来源，finding_evidence 表示某份证据对某项结论的作用。同一来源可复用。
-3. **范围先于排序。** 不适用的结论不应因“已验证”而进入当前事实集。
-4. **反证与取代的呈现不同。** 反证结论可作为已排除路径注入；被取代版本默认只在解释演化历史时呈现。
-5. **状态变更必须留痕。** 认知状态、生命周期或适用范围变更需要写入事件日志。
-6. **第一版采用确定性筛选。** 先使用项目、scope、状态、标签与关键词；只有评测证明必要时再加入 embedding 检索。
+1. epistemic_state、lifecycle_state 和当前 scope 适用性是三个独立判断。
+2. Evidence 是可复用的来源对象；finding_evidence 记录它对某条主张的作用。
+3. 检索先判定项目隔离与适用性，再计算任务相关性和优先级。
+4. 被反证的 finding 可以继续作为已排除路径；被取代的 finding 默认仅作为历史引用。
+5. 状态、适用范围和关系的关键变更必须留有理由与事件记录。
+6. 首期采用可解释的确定性检索规则，依据评测结果再决定是否引入语义检索。
 
-## 术语速查
+## 术语
 
-- **Finding：** 一项可独立理解的发现、解释、约束、决策或操作方法。
-- **Evidence：** 可定位、可追溯的证据来源。
+- **Finding：** 可独立理解的工程发现、解释、约束、决策或操作方法。
+- **Evidence：** 可定位、可追溯的来源对象。
 - **Epistemic state：** 当前证据对 finding 的支持情况。
-- **Lifecycle state：** finding 是否为当前记录版本。
-- **Scope：** finding 可以直接复用的条件。
-- **Injection：** 将选定的 findings 编排进 Agent 当前上下文。
+- **Lifecycle state：** finding 在账本中的生命周期位置。
+- **Scope：** finding 可以直接应用的条件。
+- **Injection：** 将筛选后的 findings 组织成当前 Agent 上下文的一部分。
 
-## 版本与实现原则
+## 实施约束
 
-文档中的 schema 和 API 是 V1 设计基线，可以在实现时通过 PR 修订。任何修改都应保持语义边界明确、迁移可执行并补上测试。不要为了让模型更方便填写而引入无法校验的字段，也不要把推断出来的状态伪装为实验事实。
+任何实现均应保持语义边界清晰、状态转换可验证、写操作具备事务一致性，并由测试覆盖正常路径与拒绝路径。模型生成的描述不能替代应用层校验；证据不足时应保留不确定性。
