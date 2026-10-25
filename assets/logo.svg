@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="180" viewBox="0 0 600 180" fill="none" role="img" aria-label="Finding Ledger 发现账本">
+  <defs>
+    <linearGradient id="flCard" x1="0" y1="0" x2="600" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1729"/>
+      <stop offset="1" stop-color="#090F1B"/>
+    </linearGradient>
+    <linearGradient id="flPage" x1="44" y1="40" x2="132" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B2B4D"/>
+      <stop offset="1" stop-color="#111C33"/>
+    </linearGradient>
+    <linearGradient id="flEdge" x1="44" y1="40" x2="132" y2="144" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4D6BFE" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#2A3C63" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="flCheck" x1="94" y1="104" x2="134" y2="146" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5BEBC0"/>
+      <stop offset="1" stop-color="#22B98B"/>
+    </linearGradient>
+    <radialGradient id="flGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(88 90) rotate(90) scale(76)">
+      <stop stop-color="#4D6BFE" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#4D6BFE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="1" y="1" width="598" height="178" rx="36" fill="url(#flCard)" stroke="#233252" stroke-width="2"/>
+  <circle cx="88" cy="90" r="76" fill="url(#flGlow)"/>
+
+  <g>
+    <rect x="34" y="26" width="86" height="102" rx="14" fill="#0B1322" stroke="#1B2740" stroke-width="2"/>
+    <rect x="39" y="37" width="87" height="103" rx="14" fill="#0F1A2E" stroke="#1F2C48" stroke-width="2"/>
+    <rect x="44" y="48" width="88" height="104" rx="14" fill="url(#flPage)" stroke="url(#flEdge)" stroke-width="2.5"/>
+    <g stroke-linecap="round">
+      <path d="M58 74h42" stroke="#7C9BFF" stroke-width="6"/>
+      <path d="M58 90h56" stroke="#3D5380" stroke-width="6"/>
+      <path d="M58 106h30" stroke="#3D5380" stroke-width="6"/>
+    </g>
+    <circle cx="112" cy="132" r="21" fill="url(#flCheck)" stroke="#0B1220" stroke-width="5"/>
+    <path d="M103 132.5l6.5 6.5 12-13.5" stroke="#06291E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="172" y="95" font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="50" font-weight="600" letter-spacing="-0.5" fill="#E9EEFB">Finding Ledger</text>
+  <text x="174" y="133" font-family="'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="500" letter-spacing="4" fill="#7F96C2">发现账本</text>
+</svg>

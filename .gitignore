@@ -1,0 +1,26 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 本地数据库（Finding Ledger 默认落盘位置）
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+
+# 覆盖率与日志
+coverage/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# 操作系统与编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

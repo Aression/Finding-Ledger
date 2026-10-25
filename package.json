@@ -1,0 +1,52 @@
+{
+  "name": "dsh-finding-ledger",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Evidence-backed finding ledger for long-horizon troubleshooting: a DeepSeek Harness plugin that keeps reasoning continuous across context compaction, session switches and task handovers.",
+  "license": "MIT",
+  "author": "Aression",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "finding-ledger",
+    "troubleshooting",
+    "memory",
+    "sqlite",
+    "agent-context"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aression/Finding-Ledger.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Aression/Finding-Ledger/issues"
+  },
+  "homepage": "https://github.com/Aression/Finding-Ledger#readme",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "src/*.js",
+    "cordis.patch.yml",
+    "assets/*.svg",
+    "docs/**/*.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node --check index.js && node --check src/db.js && node --check src/errors.js && node --check src/inject.js && node --check src/project.js && node --check src/retrieval.js && node --check src/runtime.js && node --check src/schema.js && node --check src/service.js && node --check src/store.js && node --check src/tools.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

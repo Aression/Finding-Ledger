@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none" role="img" aria-label="Finding Ledger 图标">
+  <defs>
+    <linearGradient id="flmCard" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1729"/>
+      <stop offset="1" stop-color="#090F1B"/>
+    </linearGradient>
+    <linearGradient id="flmPage" x1="62" y1="74" x2="180" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B2B4D"/>
+      <stop offset="1" stop-color="#111C33"/>
+    </linearGradient>
+    <linearGradient id="flmEdge" x1="62" y1="74" x2="180" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4D6BFE" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#2A3C63" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="flmCheck" x1="148" y1="168" x2="204" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5BEBC0"/>
+      <stop offset="1" stop-color="#22B98B"/>
+    </linearGradient>
+    <radialGradient id="flmGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 120) rotate(90) scale(104)">
+      <stop stop-color="#4D6BFE" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#4D6BFE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="1" y="1" width="254" height="254" rx="56" fill="url(#flmCard)" stroke="#233252" stroke-width="2"/>
+  <circle cx="128" cy="120" r="104" fill="url(#flmGlow)"/>
+
+  <g>
+    <rect x="54" y="50" width="112" height="132" rx="19" fill="#0B1322" stroke="#1B2740" stroke-width="2.5"/>
+    <rect x="58" y="62" width="115" height="135" rx="19" fill="#0F1A2E" stroke="#1F2C48" stroke-width="2.5"/>
+    <rect x="62" y="74" width="118" height="138" rx="20" fill="url(#flmPage)" stroke="url(#flmEdge)" stroke-width="3"/>
+    <g stroke-linecap="round">
+      <path d="M80 106h54" stroke="#7C9BFF" stroke-width="8"/>
+      <path d="M80 130h72" stroke="#3D5380" stroke-width="8"/>
+      <path d="M80 154h38" stroke="#3D5380" stroke-width="8"/>
+    </g>
+    <circle cx="176" cy="196" r="28" fill="url(#flmCheck)" stroke="#0A1220" stroke-width="6"/>
+    <path d="M164 196.5l8.5 8.5 15.5-17.5" stroke="#06291E" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
